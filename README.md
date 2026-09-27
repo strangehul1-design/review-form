@@ -38,7 +38,7 @@ npx wrangler secret put TELEGRAM_CHAT_ID
 - `TELEGRAM_CHAT_ID` - твой ID в Telegram (узнать у @userinfobot). Несколько получателей - через запятую.
 - Бот может писать только тем, кто нажал у него «Start».
 
-`wrangler deploy` выдаст адрес вида `https://digital-reviews.ИМЯ.workers.dev`.
+`wrangler deploy` выдаст адрес вида `https://digital-reviews.asiyatort.workers.dev`.
 Его нужно вписать в `index.html` в `ENDPOINT` с `/submit` на конце.
 
 Проверка: открыть адрес сервера в браузере, там должно быть `{"ok":true,"service":"reviews"}`.

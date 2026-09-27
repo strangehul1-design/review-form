@@ -18,6 +18,8 @@ const MIN_FILL_MS = 3000;   // быстрее 3 секунд форму запо
 
 // Отметки «что понравилось» — те же, что в форме. Остальное отбрасываем.
 const LIKED = ['Сроки', 'Дизайн', 'Общение', 'Результат'];
+// При оценке 1-2 форма спрашивает, что не понравилось. Порог тот же, что в форме.
+const BAD_MAX = 2;
 
 const escHtml = s => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -102,7 +104,7 @@ async function handleSubmit(request, env, headers) {
 
   const rows = [
     ['Оценка', `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} ${rating} из 5`],
-    liked.length ? ['Понравилось', liked.join(', ').toLowerCase()] : null,
+    liked.length ? [rating <= BAD_MAX ? 'Не понравилось' : 'Понравилось', liked.join(', ').toLowerCase()] : null,
     ['Отзыв', text],
     ['Имя', name],
     site ? ['Сайт', site] : null,

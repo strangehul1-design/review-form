@@ -229,7 +229,7 @@
       </fieldset>
 
       <fieldset class="field">
-        <legend class="label">Что понравилось больше всего <small>- если есть</small></legend>
+        <legend class="label"><span id="liked-title">Что понравилось больше всего</span> <small>- если есть</small></legend>
         <div class="chips" id="liked"></div>
       </fieldset>
 
@@ -296,6 +296,9 @@
   // Что понравилось: уходит в бота отдельной строкой, в текст отзыва не попадает.
   // Список должен совпадать с LIKED в api/worker.js
   const LIKED = ['Сроки', 'Дизайн', 'Общение', 'Результат'];
+  // При оценке 1-2 тот же блок спрашивает, что не понравилось. Порог совпадает с BAD_MAX в api/worker.js
+  const BAD_MAX = 2;
+  const isBad = () => rating > 0 && rating <= BAD_MAX;
 
   // Вопросы-подсказки меняют подсказку в поле, в сам текст ничего не вставляют
   const QUESTIONS = [
@@ -326,9 +329,15 @@
     $('stars-word').textContent = v ? '- ' + WORDS[v].toLowerCase() : '';
   }
   stars.addEventListener('change', e => {
+    const wasBad = isBad();
     rating = +e.target.value;
     paintStars(rating);
     $('err-rating').textContent = '';
+    // Блок сменил смысл - прежние отметки сбрасываем, чтобы «понравилось» не стало «не понравилось»
+    if (isBad() !== wasBad) {
+      $('liked-title').textContent = isBad() ? 'Что не понравилось' : 'Что понравилось больше всего';
+      $('liked').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    }
   });
   stars.addEventListener('mouseover', e => {
     const l = e.target.closest('label');
@@ -408,7 +417,7 @@
     return [
       'Отзыв',
       `Оценка: ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} (${rating} из 5)`,
-      liked().length ? 'Понравилось: ' + liked().join(', ').toLowerCase() : null,
+      liked().length ? (isBad() ? 'Не понравилось: ' : 'Понравилось: ') + liked().join(', ').toLowerCase() : null,
       '',
       text.value.trim(),
       '',

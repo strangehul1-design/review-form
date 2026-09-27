@@ -58,6 +58,13 @@ assert.match(sent[0].text, /<b>Понравилось:<\/b> сроки, обще
 assert.match(sent[0].text, /<b>Сайт:<\/b> asiyatort\.ru\/&lt;x&gt;/);
 console.log('--- с отметками и сайтом ---\n' + sent[0].text + '\n---');
 
+// 2б. оценка 1-2 - те же отметки означают «не понравилось», оценка 3 - ещё «понравилось»
+r = await submit({ ...good, rating: '2', liked: 'Сроки' });
+assert.match(sent[0].text, /<b>Не понравилось:<\/b> сроки/);
+r = await submit({ ...good, rating: '3', liked: 'Сроки' });
+assert.match(sent[0].text, /<b>Понравилось:<\/b> сроки/);
+assert.doesNotMatch(sent[0].text, /Не понравилось/);
+
 // 3. боты: ловушка и слишком быстро — ответ "ok", но ничего не отправлено
 for (const trap of [{ website: 'http://spam' }, { t: '500' }, { t: '' }]) {
   r = await submit({ ...good, ...trap });

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Отзыв - Digital для бизнеса</title>
+<meta name="description" content="Оставьте отзыв о работе: оценка, пара слов и имя. Займёт минуту.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #E9EDF3;
+    --sheet: #F6F8FB;
+    --ink: #0B1220;
+    --muted: #4A5568;
+    --line: #C3CBD8;
+    --accent: #2F5BFF;
+    --on-accent: #FFFFFF;
+    --accent-ink: #2448D8;
+    --accent-soft: rgba(47, 91, 255, .08);
+    --error: #B42318;
+    --f-display: 'Unbounded', 'Arial Black', Arial, sans-serif;
+    --f-body: 'Onest', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    --ease: cubic-bezier(.22, .8, .38, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 17px/1.5 var(--f-body);
+  }
+
+  .page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: clamp(28px, 7vw, 72px) 16px 48px;
+  }
+
+  .brand {
+    margin: 0 0 28px;
+    font: 600 14px/1.2 var(--f-display);
+    letter-spacing: .01em;
+  }
+  .brand a { color: inherit; text-decoration: none; }
+
+  h1 {
+    margin: 0 0 12px;
+    font: 700 clamp(30px, 8vw, 44px)/1.08 var(--f-display);
+    letter-spacing: -.02em;
+  }
+  .lead { margin: 0 0 36px; color: var(--muted); max-width: 44ch; }
+
+  .sheet {
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: clamp(20px, 5vw, 32px);
+  }
+
+  .field { margin: 0 0 28px; padding: 0; border: 0; min-width: 0; }
+  .field:last-of-type { margin-bottom: 24px; }
+  .label {
+    display: block;
+    margin: 0 0 10px;
+    padding: 0;
+    font-weight: 500;
+  }
+  .label small { font-weight: 400; color: var(--muted); font-size: 15px; }
+
+  /* Оценка */
+  .stars { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .stars input { position: absolute; opacity: 0; pointer-events: none; }
+  .stars label {
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--line);
+    transition: color .15s, transform .15s var(--ease);
+  }
+  .stars svg { width: 36px; height: 36px; fill: currentColor; }
+  .stars label.on { color: var(--accent); }
+  .stars label:active { transform: scale(.9); }
+  .stars input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Готовые варианты */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .chip {
+    font: inherit; font-size: 15px;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, border-color .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 17px; /* не меньше 16px, иначе iPhone увеличивает страницу при вводе */
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { min-height: 128px; resize: vertical; display: block; }
+  textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  ::placeholder { color: #7A8597; }
+
+  /* Длина отзыва: полоска доходит до конца, когда текста хватает */
+  .meter { height: 3px; margin: 10px 2px 8px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .meter i {
+    display: block; height: 100%; width: 0;
+    background: var(--muted);
+    transition: width .25s var(--ease), background .2s;
+  }
+  .meter.ok i { background: var(--accent); }
+  .count { margin: 0; font-size: 15px; color: var(--muted); }
+  .count.ok { color: var(--accent-ink); }
+
+  .check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+  .check input {
+    flex: none;
+    width: 22px; height: 22px;
+    margin: 1px 0 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .error { margin: 8px 0 0; color: var(--error); font-size: 15px; }
+  .error:empty { display: none; }
+  .invalid { border-color: var(--error) !important; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    min-height: 56px;
+    padding: 14px 24px;
+    font: 600 16px/1.2 var(--f-display);
+    color: var(--on-accent);
+    background: var(--accent);
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: box-shadow .2s, transform .15s var(--ease);
+  }
+  .btn:hover { box-shadow: 0 10px 24px -10px rgba(47, 91, 255, .55); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .btn svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+
+  .btn:disabled { opacity: .75; cursor: progress; box-shadow: none; }
+
+  .link { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+  .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  /* Ошибка отправки: запасной путь через Telegram или почту */
+  .fail {
+    margin: 16px 0 0;
+    padding: 14px 16px;
+    border: 1px solid var(--error);
+    border-radius: 12px;
+    font-size: 15px;
+  }
+  .fail p { margin: 0 0 6px; }
+  .fail p:last-child { margin: 0; }
+  .fail[hidden] { display: none; }
+
+  /* Поле-ловушка для ботов: людям не видно */
+  .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+  /* Экран после отправки */
+  .done[hidden], form[hidden] { display: none; }
+  .done { text-align: center; padding: 8px 0; }
+  .done svg { width: 64px; height: 64px; margin: 0 auto 16px; display: block; }
+  .done circle { fill: var(--accent); }
+  .done path {
+    fill: none; stroke: var(--on-accent); stroke-width: 3.2;
+    stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 30; stroke-dashoffset: 30;
+    animation: tick .45s .1s var(--ease) forwards;
+  }
+  @keyframes tick { to { stroke-dashoffset: 0; } }
+  .done h2 { margin: 0 0 8px; font: 700 24px/1.2 var(--f-display); }
+  .done p { margin: 0; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    .done path { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="brand"><a href="https://strangehul1-design.github.io/web-chef-portfolio/ru/">Digital для бизнеса</a></p>
+
+  <h1>Оставьте отзыв</h1>
+  <p class="lead">Займёт минуту: оценка, пара слов и имя.</p>
+
+  <div class="sheet">
+    <form id="form" novalidate>
+      <fieldset class="field">
+        <legend class="label">Оценка <small id="stars-word"></small></legend>
+        <div class="stars" id="stars">
+          <!-- звёзды собираются скриптом -->
+        </div>
+        <p class="error" id="err-rating"></p>
+      </fieldset>
+
+      <div class="field">
+        <label class="label" for="text">Отзыв <small>- выберите готовый или напишите свой</small></label>
+        <div class="chips" id="chips"></div>
+        <textarea id="text" name="text" maxlength="2000"
+          placeholder="Что понравилось, что можно сделать лучше"></textarea>
+        <div class="meter" id="meter" aria-hidden="true"><i></i></div>
+        <p class="count" id="count" aria-live="polite"></p>
+        <p class="error" id="err-text"></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="name">Как вас подписать</label>
+        <input type="text" id="name" name="name" maxlength="80" autocomplete="name"
+          placeholder="Имя, можно с названием компании или сайта">
+        <p class="error" id="err-name"></p>
+      </div>
+
+      <div class="hp" aria-hidden="true">
+        <label>Сайт <input type="text" name="website" id="website" tabindex="-1" autocomplete="off"></label>
+      </div>
+
+      <div class="field">
+        <label class="check">
+          <input type="checkbox" id="publish" name="publish">
+          <span>Можно опубликовать отзыв с моим именем в Telegram-канале с отзывами</span>
+        </label>
+      </div>
+
+      <button class="btn" type="submit" id="send">Отправить отзыв</button>
+
+      <div class="fail" id="fail" role="alert" hidden>
+        <p>Не получилось отправить. Проверьте интернет и нажмите «Отправить отзыв» ещё раз.</p>
+        <p>Или отправьте готовым сообщением: <a class="link" id="fail-tg" href="#" target="_blank" rel="noopener">в Telegram</a> или <a class="link" id="fail-mail" href="#">на почту</a>.</p>
+      </div>
+    </form>
+
+    <div class="done" id="done" hidden>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32"/><path d="M20 33l8 8 16-17"/></svg>
+      <h2 tabindex="-1">Отзыв отправлен</h2>
+      <p>Спасибо, что нашли минуту!</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Сервер на Cloudflare, который пересылает отзыв в Telegram-бота (папка api, см. README.md)
+  const ENDPOINT = '';
+
+  // Запасной путь, если отправка не удалась
+  const TELEGRAM = 'tacokingGL1';
+  const EMAIL = 'digitalgl1@mail.ru';
+
+  // Готовые отзывы. Свой отзыв должен быть не короче самого короткого из них.
+  // Для 4-5 звёзд и для 1-3 звёзд свои варианты.
+  const PRESETS = {
+    good: [
+      'Всё понравилось, рекомендую!',
+      'Сделали быстро и в срок.',
+      'Удобный и красивый сайт.',
+      'Всё объяснили и учли пожелания.',
+    ],
+    bad: [
+      'Были задержки по срокам.',
+      'Не всё вышло, как хотелось.',
+      'Хотелось бы чаще получать новости.',
+    ],
+  };
+  const MIN = Math.min(...PRESETS.good.concat(PRESETS.bad).map(s => s.length));
+
+  const WORDS = ['', 'Плохо', 'Так себе', 'Нормально', 'Хорошо', 'Отлично'];
+  const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>';
+
+  const $ = id => document.getElementById(id);
+  const form = $('form'), text = $('text'), nameEl = $('name'), publish = $('publish'), send = $('send');
+  const openedAt = Date.now();
+  let rating = 0;
+
+  // Звёзды: радиокнопки, чтобы работали с клавиатуры и экранным диктором
+  const stars = $('stars');
+  for (let i = 1; i <= 5; i++) {
+    stars.insertAdjacentHTML('beforeend',
+      `<input type="radio" name="rating" id="r${i}" value="${i}">` +
+      `<label for="r${i}" data-v="${i}" title="${WORDS[i]}" aria-label="${i} из 5">${STAR}</label>`);
+  }
+
+  function paintStars(v) {
+    stars.querySelectorAll('label').forEach(l => l.classList.toggle('on', +l.dataset.v <= v));
+    $('stars-word').textContent = v ? '- ' + WORDS[v].toLowerCase() : '';
+  }
+  stars.addEventListener('change', e => {
+    rating = +e.target.value;
+    paintStars(rating);
+    $('err-rating').textContent = '';
+    renderChips();
+  });
+  stars.addEventListener('mouseover', e => {
+    const l = e.target.closest('label');
+    if (l) paintStars(+l.dataset.v);
+  });
+  stars.addEventListener('mouseleave', () => paintStars(rating));
+
+  // Готовые варианты: нажатие добавляет фразу в текст, повторное - убирает
+  function renderChips() {
+    const list = rating && rating <= 3 ? PRESETS.bad : PRESETS.good;
+    $('chips').innerHTML = list.map(s =>
+      `<button type="button" class="chip" aria-pressed="${text.value.includes(s)}">${s}</button>`).join('');
+  }
+  $('chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const phrase = chip.textContent;
+    if (text.value.includes(phrase)) {
+      text.value = text.value.replace(phrase, '').replace(/ {2,}/g, ' ').trim();
+    } else {
+      text.value = (text.value.trim() + ' ' + phrase).trim();
+    }
+    onText();
+    renderChips();
+  });
+
+  // Счётчик длины
+  function onText() {
+    const len = text.value.trim().length;
+    const ok = len >= MIN;
+    $('meter').classList.toggle('ok', ok);
+    $('meter').firstElementChild.style.width = Math.min(100, len / MIN * 100) + '%';
+    $('count').classList.toggle('ok', ok);
+    $('count').textContent = len === 0
+      ? `Не короче ${MIN} символов`
+      : ok ? 'Длины хватает' : `Ещё ${MIN - len} ${plural(MIN - len)}`;
+    if (ok) { $('err-text').textContent = ''; text.classList.remove('invalid'); }
+  }
+  function plural(n) {
+    const a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return 'символ';
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'символа';
+    return 'символов';
+  }
+  text.addEventListener('input', () => { onText(); renderChips(); });
+  nameEl.addEventListener('input', () => {
+    if (nameEl.value.trim()) { $('err-name').textContent = ''; nameEl.classList.remove('invalid'); }
+  });
+
+  function validate() {
+    let first = null;
+    if (!rating) { $('err-rating').textContent = 'Поставьте оценку от 1 до 5'; first = first || $('r1'); }
+    const len = text.value.trim().length;
+    if (len < MIN) {
+      $('err-text').textContent = len ? `Отзыв короткий: добавьте ещё ${MIN - len} ${plural(MIN - len)}` : 'Напишите отзыв или выберите готовый';
+      text.classList.add('invalid');
+      first = first || text;
+    }
+    if (!nameEl.value.trim()) {
+      $('err-name').textContent = 'Напишите, как вас подписать';
+      nameEl.classList.add('invalid');
+      first = first || nameEl;
+    }
+    if (first) first.focus();
+    return !first;
+  }
+
+  // Текст для запасного пути через Telegram или почту
+  function message() {
+    return [
+      'Отзыв',
+      `Оценка: ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} (${rating} из 5)`,
+      '',
+      text.value.trim(),
+      '',
+      `- ${nameEl.value.trim()}`,
+      publish.checked ? 'Можно опубликовать в канале' : 'Не публиковать',
+    ].join('\n');
+  }
+
+  async function post() {
+    if (!ENDPOINT) throw new Error('ENDPOINT не задан');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      // Обычные поля формы: браузер отправляет их без предварительного запроса
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        body: new URLSearchParams({
+          rating,
+          text: text.value.trim(),
+          name: nameEl.value.trim(),
+          publish: publish.checked ? '1' : '',
+          website: $('website').value,
+          t: Date.now() - openedAt,
+        }),
+        signal: ctrl.signal,
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'not ok');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (send.disabled || !validate()) return;
+    $('fail').hidden = true;
+    send.disabled = true;
+    send.textContent = 'Отправляем…';
+    try {
+      await post();
+      form.hidden = true;
+      $('done').hidden = false;
+      $('done').querySelector('h2').focus();
+    } catch (err) {
+      console.warn('Отзыв не отправлен:', err);
+      $('fail-tg').href = `https://t.me/${TELEGRAM}?text=${encodeURIComponent(message())}`;
+      $('fail-mail').href = `mailto:${EMAIL}?subject=${encodeURIComponent('Отзыв')}&body=${encodeURIComponent(message())}`;
+      $('fail').hidden = false;
+    } finally {
+      send.disabled = false;
+      send.textContent = 'Отправить отзыв';
+    }
+  });
+
+  renderChips();
+  onText();
+</script>
+</body>
+</html>

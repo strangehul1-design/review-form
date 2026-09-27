@@ -88,7 +88,7 @@
   .stars label:active { transform: scale(.9); }
   .stars input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* Готовые варианты */
+  /* Отметки «что понравилось» и вопросы-подсказки */
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
   .chip {
     font: inherit; font-size: 15px;
@@ -104,6 +104,10 @@
   .chip:hover { border-color: var(--accent); }
   .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
   .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chip--tag[aria-pressed="true"]::before { content: '✓ '; }
+  /* Вопрос - подсказка, а не ответ: пунктирная рамка */
+  .chip--q { border-style: dashed; font-size: 14px; padding: 6px 12px; }
+  .chip--q[aria-pressed="true"] { border-style: solid; }
 
   textarea, input[type="text"] {
     width: 100%;
@@ -225,11 +229,15 @@
         <p class="error" id="err-rating"></p>
       </fieldset>
 
+      <fieldset class="field">
+        <legend class="label">Что понравилось больше всего <small>- если есть</small></legend>
+        <div class="chips" id="liked"></div>
+      </fieldset>
+
       <div class="field">
-        <label class="label" for="text">Отзыв <small>- выберите готовый или напишите свой</small></label>
-        <div class="chips" id="chips"></div>
-        <textarea id="text" name="text" maxlength="2000"
-          placeholder="Что понравилось, что можно сделать лучше"></textarea>
+        <label class="label" for="text">Отзыв <small>- своими словами</small></label>
+        <div class="chips" id="questions"></div>
+        <textarea id="text" name="text" maxlength="2000"></textarea>
         <div class="meter" id="meter" aria-hidden="true"><i></i></div>
         <p class="count" id="count" aria-live="polite"></p>
         <p class="error" id="err-text"></p>
@@ -238,8 +246,14 @@
       <div class="field">
         <label class="label" for="name">Как вас подписать</label>
         <input type="text" id="name" name="name" maxlength="80" autocomplete="name"
-          placeholder="Имя, можно с названием компании или сайта">
+          placeholder="Имя, можно с названием компании">
         <p class="error" id="err-name"></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="site">Сайт, о котором отзыв <small>- если есть</small></label>
+        <input type="text" id="site" name="site" maxlength="200" inputmode="url" autocomplete="url"
+          placeholder="Адрес сайта">
       </div>
 
       <div class="hp" aria-hidden="true">
@@ -277,22 +291,20 @@
   const TELEGRAM = 'tacokingGL1';
   const EMAIL = 'digitalgl1@mail.ru';
 
-  // Готовые отзывы. Свой отзыв должен быть не короче самого короткого из них.
-  // Для 4-5 звёзд и для 1-3 звёзд свои варианты.
-  const PRESETS = {
-    good: [
-      'Всё понравилось, рекомендую!',
-      'Сделали быстро и в срок.',
-      'Удобный и красивый сайт.',
-      'Всё объяснили и учли пожелания.',
-    ],
-    bad: [
-      'Были задержки по срокам.',
-      'Не всё вышло, как хотелось.',
-      'Хотелось бы чаще получать новости.',
-    ],
-  };
-  const MIN = Math.min(...PRESETS.good.concat(PRESETS.bad).map(s => s.length));
+  // Минимальная длина отзыва
+  const MIN = 30;
+
+  // Что понравилось: уходит в бота отдельной строкой, в текст отзыва не попадает.
+  // Список должен совпадать с LIKED в api/worker.js
+  const LIKED = ['Сроки', 'Дизайн', 'Общение', 'Результат'];
+
+  // Вопросы-подсказки меняют подсказку в поле, в сам текст ничего не вставляют
+  const QUESTIONS = [
+    ['С какой задачей пришли?', 'С какой задачей пришли: какой нужен был сайт и зачем'],
+    ['Что получилось?', 'Что получилось в итоге и что изменилось после запуска'],
+    ['Что бы улучшили?', 'Что можно было сделать лучше - это тоже важно'],
+  ];
+  const PLACEHOLDER = 'Расскажите своими словами, как всё прошло';
 
   const WORDS = ['', 'Плохо', 'Так себе', 'Нормально', 'Хорошо', 'Отлично'];
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>';
@@ -318,7 +330,6 @@
     rating = +e.target.value;
     paintStars(rating);
     $('err-rating').textContent = '';
-    renderChips();
   });
   stars.addEventListener('mouseover', e => {
     const l = e.target.closest('label');
@@ -326,23 +337,30 @@
   });
   stars.addEventListener('mouseleave', () => paintStars(rating));
 
-  // Готовые варианты: нажатие добавляет фразу в текст, повторное - убирает
-  function renderChips() {
-    const list = rating && rating <= 3 ? PRESETS.bad : PRESETS.good;
-    $('chips').innerHTML = list.map(s =>
-      `<button type="button" class="chip" aria-pressed="${text.value.includes(s)}">${s}</button>`).join('');
-  }
-  $('chips').addEventListener('click', e => {
+  // Отметки «что понравилось»: можно выбрать несколько
+  $('liked').innerHTML = LIKED.map(s =>
+    `<button type="button" class="chip chip--tag" aria-pressed="false">${s}</button>`).join('');
+  $('liked').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (chip) chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') !== 'true');
+  });
+  const liked = () => [...$('liked').querySelectorAll('[aria-pressed="true"]')].map(c => c.textContent);
+
+  // Вопросы-подсказки: выбранный вопрос виден в подсказке поля
+  text.placeholder = PLACEHOLDER;
+  $('questions').innerHTML = QUESTIONS.map(([q], i) =>
+    `<button type="button" class="chip chip--q" data-i="${i}" aria-pressed="false">${q}</button>`).join('');
+  $('questions').addEventListener('click', e => {
     const chip = e.target.closest('.chip');
     if (!chip) return;
-    const phrase = chip.textContent;
-    if (text.value.includes(phrase)) {
-      text.value = text.value.replace(phrase, '').replace(/ {2,}/g, ' ').trim();
-    } else {
-      text.value = (text.value.trim() + ' ' + phrase).trim();
-    }
-    onText();
-    renderChips();
+    const on = chip.getAttribute('aria-pressed') !== 'true';
+    $('questions').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', on);
+    text.placeholder = on ? QUESTIONS[chip.dataset.i][1] : PLACEHOLDER;
+    // Текст уже есть - ответ на новый вопрос начинаем с нового абзаца
+    if (on && text.value.trim() && !/\n\s*$/.test(text.value)) text.value = text.value.replace(/\s+$/, '') + '\n\n';
+    text.focus();
+    text.setSelectionRange(text.value.length, text.value.length);
   });
 
   // Счётчик длины
@@ -363,7 +381,7 @@
     if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'символа';
     return 'символов';
   }
-  text.addEventListener('input', () => { onText(); renderChips(); });
+  text.addEventListener('input', onText);
   nameEl.addEventListener('input', () => {
     if (nameEl.value.trim()) { $('err-name').textContent = ''; nameEl.classList.remove('invalid'); }
   });
@@ -373,7 +391,7 @@
     if (!rating) { $('err-rating').textContent = 'Поставьте оценку от 1 до 5'; first = first || $('r1'); }
     const len = text.value.trim().length;
     if (len < MIN) {
-      $('err-text').textContent = len ? `Отзыв короткий: добавьте ещё ${MIN - len} ${plural(MIN - len)}` : 'Напишите отзыв или выберите готовый';
+      $('err-text').textContent = len ? `Отзыв короткий: добавьте ещё ${MIN - len} ${plural(MIN - len)}` : 'Напишите пару слов о том, как всё прошло';
       text.classList.add('invalid');
       first = first || text;
     }
@@ -391,12 +409,14 @@
     return [
       'Отзыв',
       `Оценка: ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} (${rating} из 5)`,
+      liked().length ? 'Понравилось: ' + liked().join(', ').toLowerCase() : null,
       '',
       text.value.trim(),
       '',
       `- ${nameEl.value.trim()}`,
+      $('site').value.trim() ? 'Сайт: ' + $('site').value.trim() : null,
       publish.checked ? 'Можно опубликовать в канале' : 'Не публиковать',
-    ].join('\n');
+    ].filter(line => line !== null).join('\n');
   }
 
   async function post() {
@@ -411,6 +431,8 @@
           rating,
           text: text.value.trim(),
           name: nameEl.value.trim(),
+          liked: liked().join(','),
+          site: $('site').value.trim(),
           publish: publish.checked ? '1' : '',
           website: $('website').value,
           t: Date.now() - openedAt,
@@ -446,7 +468,6 @@
     }
   });
 
-  renderChips();
   onText();
 </script>
 </body>

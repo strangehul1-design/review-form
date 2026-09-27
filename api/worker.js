@@ -16,6 +16,9 @@
 const MIN_TEXT = 10;        // грубая защита от пустых отзывов; в самой форме минимум строже
 const MIN_FILL_MS = 3000;   // быстрее 3 секунд форму заполняют только боты
 
+// Отметки «что понравилось» — те же, что в форме. Остальное отбрасываем.
+const LIKED = ['Сроки', 'Дизайн', 'Общение', 'Результат'];
+
 const escHtml = s => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -91,16 +94,20 @@ async function handleSubmit(request, env, headers) {
   const text = field('text').slice(0, 2000);
   const name = field('name').slice(0, 80);
   const publish = Boolean(field('publish'));
+  const liked = LIKED.filter(v => field('liked').split(',').map(s => s.trim()).includes(v));
+  const site = field('site').slice(0, 200);
   if (!(rating >= 1 && rating <= 5) || text.length < MIN_TEXT || !name) {
     return json({ ok: false, error: 'Не хватает оценки, текста или имени' }, 400, headers);
   }
 
   const rows = [
     ['Оценка', `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} ${rating} из 5`],
+    liked.length ? ['Понравилось', liked.join(', ').toLowerCase()] : null,
     ['Отзыв', text],
     ['Имя', name],
+    site ? ['Сайт', site] : null,
     ['Публикация', publish ? 'можно опубликовать в канале' : 'не публиковать'],
-  ];
+  ].filter(Boolean);
   const html = ['<b>⭐ Новый отзыв</b>', '']
     .concat(rows.map(([k, v]) => `<b>${escHtml(k)}:</b> ${escHtml(v)}`))
     .concat(['', '<i>Форма отзывов</i>'])

@@ -46,10 +46,17 @@ assert.match(sent[0].text, /★★★★★ 5 из 5/);
 assert.match(sent[0].text, /можно опубликовать в канале/);
 console.log('--- сообщение в Telegram ---\n' + sent[0].text + '\n---');
 
-// 2. без галочки публикации
+// 2. без галочки публикации; без отметок и сайта этих строк нет
 r = await submit({ ...good, publish: '', rating: '3' });
 assert.match(sent[0].text, /★★★☆☆ 3 из 5/);
 assert.match(sent[0].text, /не публиковать/);
+assert.doesNotMatch(sent[0].text, /Понравилось|Сайт:/);
+
+// 2а. отметки и сайт: чужие отметки отбрасываются, сайт экранируется
+r = await submit({ ...good, liked: 'Сроки,Взлом,Общение', site: 'asiyatort.ru/<x>' });
+assert.match(sent[0].text, /<b>Понравилось:<\/b> сроки, общение\r?\n/);
+assert.match(sent[0].text, /<b>Сайт:<\/b> asiyatort\.ru\/&lt;x&gt;/);
+console.log('--- с отметками и сайтом ---\n' + sent[0].text + '\n---');
 
 // 3. боты: ловушка и слишком быстро — ответ "ok", но ничего не отправлено
 for (const trap of [{ website: 'http://spam' }, { t: '500' }, { t: '' }]) {
